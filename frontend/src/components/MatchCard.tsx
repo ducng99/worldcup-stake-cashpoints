@@ -1,0 +1,94 @@
+import { Show } from 'solid-js'
+import type { Match } from '../types'
+import { getFlagClass } from '../flags'
+
+interface Props {
+  match: Match
+  teamOwners: Record<string, string>
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleString('en-NZ', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Pacific/Auckland',
+    timeZoneName: 'short',
+  })
+}
+
+function formatStage(stage: string) {
+  return stage.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+export default function MatchCard(props: Props) {
+  const homeOwner = () => props.teamOwners[props.match.homeTeamCode]
+  const awayOwner = () => props.teamOwners[props.match.awayTeamCode]
+  const homeFlag = () => getFlagClass(props.match.homeTeamCode)
+  const awayFlag = () => getFlagClass(props.match.awayTeamCode)
+
+  const isFinished = () => props.match.status === 'FINISHED' || props.match.status === 'AWARDED'
+  const isLive = () => props.match.status === 'IN_PLAY' || props.match.status === 'PAUSED'
+  const hasScore = () =>
+    (isFinished() || isLive()) &&
+    props.match.homeScore !== null &&
+    props.match.awayScore !== null
+
+  const rowClass = () => {
+    if (isFinished()) return 'match-row finished'
+    if (isLive()) return 'match-row live'
+    return 'match-row upcoming'
+  }
+
+  return (
+    <div class={rowClass()}>
+      <div class="row-meta">
+        <span class="row-stage">{formatStage(props.match.stage)}</span>
+        <Show when={isLive()}>
+          <span class="live-badge">
+            <span class="live-dot" />
+            LIVE
+          </span>
+        </Show>
+        <span class="row-date">{formatDate(props.match.matchDate)}</span>
+      </div>
+      <div class="row-fixture">
+        <div class="row-team home">
+          <div class="row-team-info">
+            <span class="row-team-name">{props.match.homeTeam}</span>
+            <Show when={homeOwner()}>
+              <span class="owner-badge">{homeOwner()}</span>
+            </Show>
+          </div>
+          <Show when={homeFlag()} fallback={<div class="row-flag-placeholder" />}>
+            <span class={`${homeFlag()} row-flag`} />
+          </Show>
+        </div>
+
+        <div class="row-score-block">
+          <Show when={hasScore()} fallback={<span class="row-vs">vs</span>}>
+            <span class="row-score">
+              <span class="row-score-num">{props.match.homeScore}</span>
+              <span class="row-score-sep">–</span>
+              <span class="row-score-num">{props.match.awayScore}</span>
+            </span>
+          </Show>
+        </div>
+
+        <div class="row-team away">
+          <Show when={awayFlag()} fallback={<div class="row-flag-placeholder" />}>
+            <span class={`${awayFlag()} row-flag`} />
+          </Show>
+          <div class="row-team-info away-info">
+            <span class="row-team-name">{props.match.awayTeam}</span>
+            <Show when={awayOwner()}>
+              <span class="owner-badge">{awayOwner()}</span>
+            </Show>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
