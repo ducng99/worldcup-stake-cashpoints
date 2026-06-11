@@ -3,6 +3,8 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -24,6 +26,25 @@ type pushPayload struct {
 	Body  string `json:"body"`
 	URL   string `json:"url"`
 	Type  string `json:"type"`
+}
+
+type pushTemplate struct {
+	Title string
+	Body  string
+}
+
+var matchStartTemplates = []pushTemplate{
+	{Title: "Kickoff!", Body: "%s vs %s is underway. Time to sweat your stake."},
+	{Title: "Ball's rolling", Body: "%s vs %s has kicked off. Your team is on the clock."},
+	{Title: "Game on", Body: "%s vs %s is live. Settle in and watch the table shake."},
+	{Title: "Whistle blown", Body: "%s vs %s just started. Every minute matters now."},
+}
+
+var leaderboardTemplates = []pushTemplate{
+	{Title: "The table just moved", Body: "You're now %s after moving from %s."},
+	{Title: "Leaderboard drama", Body: "The standings changed: %s now, %s before."},
+	{Title: "Table update", Body: "You're sitting %s after being %s. Check the damage."},
+	{Title: "Rank shuffle", Body: "You've landed at %s after starting at %s. The race is heating up."},
 }
 
 type pushSubscriptionInput struct {
@@ -159,6 +180,7 @@ func UnsubscribePush(database *sql.DB) gin.HandlerFunc {
 }
 
 func (p *PushService) NotifyMatchStart(matchID string, homeTeamID, awayTeamID int64, homeTeam, awayTeam string) {
+	template := randomPushTemplate(matchStartTemplates)
 	p.sendToSubscriptions(`
 		SELECT ps.id, ps.endpoint, ps.p256dh, ps.auth
 		FROM push_subscriptions ps
@@ -166,8 +188,8 @@ func (p *PushService) NotifyMatchStart(matchID string, homeTeamID, awayTeamID in
 		WHERE ps.notify_match_start = 1 AND ut.team_id IN (?, ?)
 		GROUP BY ps.id
 	`, []any{homeTeamID, awayTeamID}, "match-start:"+matchID, pushPayload{
-		Title: "Match starting",
-		Body:  homeTeam + " vs " + awayTeam + " is live.",
+		Title: template.Title,
+		Body:  fmt.Sprintf(template.Body, homeTeam, awayTeam),
 		URL:   "/",
 		Type:  "match-start",
 	})
@@ -175,16 +197,21 @@ func (p *PushService) NotifyMatchStart(matchID string, homeTeamID, awayTeamID in
 
 func (p *PushService) NotifyLeaderboardChange(userID, oldRank, newRank, points int) {
 	eventKey := "leaderboard-rank:" + itoa(userID) + ":" + itoa(oldRank) + ":" + itoa(newRank) + ":" + itoa(points)
+	template := randomPushTemplate(leaderboardTemplates)
 	p.sendToSubscriptions(`
 		SELECT id, endpoint, p256dh, auth
 		FROM push_subscriptions
 		WHERE notify_leaderboard = 1 AND user_id = ?
 	`, []any{userID}, eventKey, pushPayload{
-		Title: "New leaderboard position",
-		Body:  "You moved from " + ordinal(oldRank) + " to " + ordinal(newRank) + ".",
+		Title: template.Title,
+		Body:  fmt.Sprintf(template.Body, ordinal(newRank), ordinal(oldRank)),
 		URL:   "/leaderboard",
 		Type:  "leaderboard",
 	})
+}
+
+func randomPushTemplate(templates []pushTemplate) pushTemplate {
+	return templates[rand.Intn(len(templates))]
 }
 
 func (p *PushService) sendToSubscriptions(query string, args []any, eventKey string, payload pushPayload) {

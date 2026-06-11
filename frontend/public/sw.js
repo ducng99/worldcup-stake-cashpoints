@@ -1,7 +1,7 @@
 self.addEventListener('push', (event) => {
   let payload = {
     title: 'World Cup Stakes',
-    body: 'There is an update.',
+    body: 'Fresh drama just hit the pitch.',
     url: '/',
     type: 'update',
   }

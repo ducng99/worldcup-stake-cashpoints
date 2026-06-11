@@ -34,7 +34,7 @@ func main() {
 		if apiKey != "" {
 			syncer.Sync()
 		}
-		ticker := time.NewTicker(5 * time.Minute)
+		ticker := time.NewTicker(1 * time.Minute)
 		for range ticker.C {
 			if apiKey != "" {
 				syncer.Sync()
