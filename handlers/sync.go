@@ -103,6 +103,7 @@ func (s *Syncer) Sync() {
 			log.Printf("Sync: failed to fetch previous match %d status: %v", m.ID, err)
 			continue
 		}
+		nextStatus := nextMatchStatus(previousStatus, m.Status)
 
 		_, err = s.db.Exec(`
 			INSERT INTO matches (id, home_team_id, away_team_id, home_score, away_score, status, match_date, stage)
@@ -115,12 +116,12 @@ func (s *Syncer) Sync() {
 				stage      = excluded.stage
 		`, matchID, home.ID, away.ID,
 			m.Score.FullTime.Home, m.Score.FullTime.Away,
-			m.Status, m.UtcDate, m.Stage)
+			nextStatus, m.UtcDate, m.Stage)
 		if err != nil {
 			log.Printf("Sync: failed to upsert match %d: %v", m.ID, err)
 			continue
 		}
-		if s.push != nil && isUpcomingStatus(previousStatus) && isLiveStatus(m.Status) {
+		if s.push != nil && isUpcomingStatus(previousStatus) && isLiveStatus(nextStatus) {
 			s.push.NotifyMatchStart(matchID, home.ID, away.ID, home.Name, away.Name)
 		}
 		updated++
@@ -163,8 +164,8 @@ func (s *Syncer) previousMatchStatus(matchID string) (string, error) {
 }
 
 func isLiveStatus(status string) bool {
-	switch strings.ToUpper(strings.TrimSpace(status)) {
-	case "IN_PLAY", "PAUSED", "LIVE", "TIMED":
+	switch normalizeStatus(status) {
+	case "IN_PLAY", "PAUSED", "LIVE":
 		return true
 	default:
 		return false
@@ -172,12 +173,48 @@ func isLiveStatus(status string) bool {
 }
 
 func isUpcomingStatus(status string) bool {
-	switch strings.ToUpper(strings.TrimSpace(status)) {
-	case "SCHEDULED":
+	switch normalizeStatus(status) {
+	case "SCHEDULED", "TIMED":
 		return true
 	default:
 		return false
 	}
+}
+
+func isFinishedStatus(status string) bool {
+	switch normalizeStatus(status) {
+	case "FINISHED", "AWARDED":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeStatus(status string) string {
+	return strings.ToUpper(strings.TrimSpace(status))
+}
+
+func nextMatchStatus(previousStatus, incomingStatus string) string {
+	previous := normalizeStatus(previousStatus)
+	incoming := normalizeStatus(incomingStatus)
+	if previous == "" {
+		return incoming
+	}
+	if isFinishedStatus(previous) {
+		return previous
+	}
+	if isLiveStatus(previous) {
+		if isFinishedStatus(incoming) {
+			return incoming
+		}
+		return previous
+	}
+	if isUpcomingStatus(previous) {
+		if isUpcomingStatus(incoming) || isLiveStatus(incoming) || isFinishedStatus(incoming) {
+			return incoming
+		}
+	}
+	return previous
 }
 
 func (s *Syncer) notifyLeaderboardChanges() error {

@@ -24,7 +24,7 @@ function formatStage(stage: string) {
 }
 
 function isLiveStatus(status: string) {
-  return ['IN_PLAY', 'PAUSED', 'LIVE', 'TIMED'].includes(status.trim().toUpperCase())
+  return ['IN_PLAY', 'PAUSED', 'LIVE'].includes(status.trim().toUpperCase())
 }
 
 export default function MatchCard(props: Props) {
