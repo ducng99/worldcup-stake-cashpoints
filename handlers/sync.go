@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -119,7 +120,7 @@ func (s *Syncer) Sync() {
 			log.Printf("Sync: failed to upsert match %d: %v", m.ID, err)
 			continue
 		}
-		if s.push != nil && !isLiveStatus(previousStatus) && isLiveStatus(m.Status) {
+		if s.push != nil && isUpcomingStatus(previousStatus) && isLiveStatus(m.Status) {
 			s.push.NotifyMatchStart(matchID, home.ID, away.ID, home.Name, away.Name)
 		}
 		updated++
@@ -162,8 +163,17 @@ func (s *Syncer) previousMatchStatus(matchID string) (string, error) {
 }
 
 func isLiveStatus(status string) bool {
-	switch status {
+	switch strings.ToUpper(strings.TrimSpace(status)) {
 	case "IN_PLAY", "PAUSED", "LIVE":
+		return true
+	default:
+		return false
+	}
+}
+
+func isUpcomingStatus(status string) bool {
+	switch strings.ToUpper(strings.TrimSpace(status)) {
+	case "SCHEDULED", "TIMED":
 		return true
 	default:
 		return false
