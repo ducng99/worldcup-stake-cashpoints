@@ -23,18 +23,14 @@ function formatStage(stage: string) {
   return stage.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function isLiveStatus(status: string) {
-  return ['IN_PLAY', 'PAUSED', 'LIVE'].includes(status.trim().toUpperCase())
-}
-
 export default function MatchCard(props: Props) {
   const homeOwner = () => props.teamOwners[props.match.homeTeamCode]
   const awayOwner = () => props.teamOwners[props.match.awayTeamCode]
   const homeFlag = () => getFlagClass(props.match.homeTeamCode)
   const awayFlag = () => getFlagClass(props.match.awayTeamCode)
 
-  const isFinished = () => props.match.status === 'FINISHED' || props.match.status === 'AWARDED'
-  const isLive = () => isLiveStatus(props.match.status)
+  const isFinished = () => props.match.status === 'FINISHED'
+  const isLive = () => props.match.status === 'LIVE'
   const hasScore = () =>
     (isFinished() || isLive()) &&
     props.match.homeScore !== null &&

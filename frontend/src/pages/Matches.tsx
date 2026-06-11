@@ -33,16 +33,15 @@ export default function Matches() {
     )
   }
 
+  const live = () => data()?.matches.filter((m) => m.status === 'LIVE') ?? []
+
   const upcoming = () =>
-    data()?.matches.filter(
-      (m) => m.status !== 'FINISHED' && m.status !== 'AWARDED' && m.status !== 'CANCELLED'
-    ) ?? []
+    data()?.matches.filter((m) => m.status !== 'FINISHED' && m.status !== 'LIVE') ?? []
 
   const finished = () =>
-    [...(data()?.matches.filter(
-      (m) => m.status === 'FINISHED' || m.status === 'AWARDED'
-    ) ?? [])].reverse()
+    [...(data()?.matches.filter((m) => m.status === 'FINISHED') ?? [])].reverse()
 
+  const visibleLive = () => filterMatches(live())
   const visibleUpcoming = () => filterMatches(upcoming())
   const visibleFinished = () => filterMatches(finished())
 
@@ -70,6 +69,22 @@ export default function Matches() {
             <button class="filter-clear" onClick={() => setFilterPlayer('')}>✕</button>
           </Show>
         </div>
+        <section>
+          <div class="section-header">
+            <h2 class="section-title">LIVE</h2>
+            <div class="section-line" />
+            <span class="section-count">{visibleLive().length}</span>
+          </div>
+          <Show when={visibleLive().length === 0} fallback={
+            <div class="match-list">
+              <For each={visibleLive()}>
+                {(match) => <MatchCard match={match} teamOwners={data()!.teamOwners} />}
+              </For>
+            </div>
+          }>
+            <p class="empty">No live matches.</p>
+          </Show>
+        </section>
         <section>
           <div class="section-header">
             <h2 class="section-title">Upcoming</h2>

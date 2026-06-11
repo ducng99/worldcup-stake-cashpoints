@@ -164,42 +164,40 @@ func (s *Syncer) previousMatchStatus(matchID string) (string, error) {
 }
 
 func isLiveStatus(status string) bool {
-	switch normalizeStatus(status) {
-	case "IN_PLAY", "PAUSED", "LIVE":
-		return true
-	default:
-		return false
-	}
+	return normalizeMatchStatus(status) == "LIVE"
 }
 
 func isUpcomingStatus(status string) bool {
-	switch normalizeStatus(status) {
-	case "SCHEDULED", "TIMED":
-		return true
-	default:
-		return false
-	}
+	return normalizeMatchStatus(status) == "UPCOMING"
 }
 
 func isFinishedStatus(status string) bool {
-	switch normalizeStatus(status) {
-	case "FINISHED", "AWARDED":
-		return true
-	default:
-		return false
-	}
+	return normalizeMatchStatus(status) == "FINISHED"
 }
 
 func normalizeStatus(status string) string {
 	return strings.ToUpper(strings.TrimSpace(status))
 }
 
+func normalizeMatchStatus(status string) string {
+	switch normalizeStatus(status) {
+	case "UPCOMING", "SCHEDULED", "TIMED":
+		return "UPCOMING"
+	case "LIVE", "IN_PLAY", "PAUSED":
+		return "LIVE"
+	case "FINISHED", "AWARDED", "CANCELLED", "POSTPONED", "SUSPENDED":
+		return "FINISHED"
+	default:
+		return "UPCOMING"
+	}
+}
+
 func nextMatchStatus(previousStatus, incomingStatus string) string {
-	previous := normalizeStatus(previousStatus)
-	incoming := normalizeStatus(incomingStatus)
-	if previous == "" {
+	incoming := normalizeMatchStatus(incomingStatus)
+	if normalizeStatus(previousStatus) == "" {
 		return incoming
 	}
+	previous := normalizeMatchStatus(previousStatus)
 	if isFinishedStatus(previous) {
 		return previous
 	}

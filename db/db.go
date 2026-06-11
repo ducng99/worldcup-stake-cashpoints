@@ -84,6 +84,20 @@ func migrate(database *sql.DB) error {
 			points     INTEGER NOT NULL,
 			updated_at TEXT NOT NULL
 		);
+		UPDATE matches
+		SET status = CASE UPPER(TRIM(status))
+			WHEN 'SCHEDULED' THEN 'UPCOMING'
+			WHEN 'TIMED' THEN 'UPCOMING'
+			WHEN 'IN_PLAY' THEN 'LIVE'
+			WHEN 'PAUSED' THEN 'LIVE'
+			WHEN 'AWARDED' THEN 'FINISHED'
+			WHEN 'CANCELLED' THEN 'FINISHED'
+			WHEN 'POSTPONED' THEN 'FINISHED'
+			WHEN 'SUSPENDED' THEN 'FINISHED'
+			ELSE UPPER(TRIM(status))
+		END
+		WHERE status IS NOT NULL
+			AND UPPER(TRIM(status)) NOT IN ('UPCOMING', 'LIVE', 'FINISHED');
 	`)
 	return err
 }
