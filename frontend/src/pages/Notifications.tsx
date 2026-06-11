@@ -90,7 +90,7 @@ export default function Notifications() {
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       })
 
-      const res = await fetch('/api/push/subscribe', {
+      const res = await fetch('/api/push/subscriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,8 +128,8 @@ export default function Notifications() {
         return
       }
 
-      const res = await fetch('/api/push/preferences', {
-        method: 'PUT',
+      const res = await fetch('/api/push/subscriptions/preferences', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoint: subscription.endpoint,
@@ -161,8 +161,8 @@ export default function Notifications() {
         return
       }
 
-      await fetch('/api/push/unsubscribe', {
-        method: 'POST',
+      await fetch('/api/push/subscriptions', {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: subscription.endpoint }),
       })

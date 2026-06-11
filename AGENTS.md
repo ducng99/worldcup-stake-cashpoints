@@ -46,9 +46,9 @@ The Go binary embeds `frontend/dist/` at build time via `//go:embed all:dist` (`
 | GET | `/api/matches` | Returns matches + team→owner map |
 | GET | `/api/leaderboard` | Returns players ranked by wins |
 | GET | `/api/push/vapid-public-key` | Returns configured VAPID public key |
-| POST | `/api/push/subscribe` | Upserts a browser push subscription |
-| PUT | `/api/push/preferences` | Updates selected player/preferences for an endpoint |
-| POST | `/api/push/unsubscribe` | Deletes a browser push subscription |
+| POST | `/api/push/subscriptions` | Upserts a browser push subscription |
+| PATCH | `/api/push/subscriptions/preferences` | Updates selected player/preferences for an endpoint |
+| DELETE | `/api/push/subscriptions` | Deletes a browser push subscription |
 | POST | `/api/sync` | Manually triggers a match sync |
 
 **Database:** SQLite file `stake.db`. Tables: `users`, `teams`, `user_teams`, `matches`, `push_subscriptions`, `notification_deliveries`, `leaderboard_state`. No migration tool — schema is created on startup. Scoring: 1 point per finished match win for an owned team.

@@ -55,9 +55,9 @@ func main() {
 		api.GET("/matches", handlers.GetMatches(database))
 		api.GET("/leaderboard", handlers.GetLeaderboard(database))
 		api.GET("/push/vapid-public-key", handlers.GetVAPIDPublicKey(pushService))
-		api.POST("/push/subscribe", handlers.SubscribePush(database))
-		api.PUT("/push/preferences", handlers.UpdatePushPreferences(database))
-		api.POST("/push/unsubscribe", handlers.UnsubscribePush(database))
+		api.POST("/push/subscriptions", handlers.SubscribePush(database))
+		api.PATCH("/push/subscriptions/preferences", handlers.UpdatePushPreferences(database))
+		api.DELETE("/push/subscriptions", handlers.UnsubscribePush(database))
 		api.POST("/sync", func(c *gin.Context) {
 			if apiKey == "" {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "FOOTBALL_DATA_API_KEY not set"})

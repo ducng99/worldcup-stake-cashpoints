@@ -103,9 +103,9 @@ Compose mounts `./data` into the container at `/data` and sets `DATA_DIR=/data`.
 | `GET` | `/api/matches` | Returns matches and team ownership data. |
 | `GET` | `/api/leaderboard` | Returns players ranked by wins. |
 | `GET` | `/api/push/vapid-public-key` | Returns the configured VAPID public key. |
-| `POST` | `/api/push/subscribe` | Creates or updates a browser push subscription. |
-| `PUT` | `/api/push/preferences` | Updates push notification preferences. |
-| `POST` | `/api/push/unsubscribe` | Deletes a browser push subscription. |
+| `POST` | `/api/push/subscriptions` | Creates or updates a browser push subscription. |
+| `PATCH` | `/api/push/subscriptions/preferences` | Updates push notification preferences. |
+| `DELETE` | `/api/push/subscriptions` | Deletes a browser push subscription. |
 | `POST` | `/api/sync` | Triggers a match sync when `FOOTBALL_DATA_API_KEY` is set. |
 
 ## Data
