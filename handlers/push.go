@@ -67,6 +67,10 @@ type unsubscribeInput struct {
 	Endpoint string `json:"endpoint"`
 }
 
+type testNotificationInput struct {
+	Subscription pushSubscriptionInput `json:"subscription"`
+}
+
 func NewPushService(database *sql.DB) *PushService {
 	return &PushService{
 		db:         database,
@@ -176,6 +180,62 @@ func UnsubscribePush(database *sql.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"status": "unsubscribed"})
+	}
+}
+
+func SendTestNotification(push *PushService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var input testNotificationInput
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if input.Subscription.Endpoint == "" || input.Subscription.Keys.P256dh == "" || input.Subscription.Keys.Auth == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "subscription endpoint and keys are required"})
+			return
+		}
+
+		if push.publicKey == "" || push.privateKey == "" || push.subject == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "VAPID keys not configured"})
+			return
+		}
+
+		data, err := json.Marshal(pushPayload{
+			Title: "Test notification",
+			Body:  "If you see this, push notifications are working!",
+			URL:   "/",
+			Type:  "test",
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal payload"})
+			return
+		}
+
+		resp, err := webpush.SendNotification(data, &webpush.Subscription{
+			Endpoint: input.Subscription.Endpoint,
+			Keys: webpush.Keys{
+				P256dh: input.Subscription.Keys.P256dh,
+				Auth:   input.Subscription.Keys.Auth,
+			},
+		}, &webpush.Options{
+			Subscriber:      push.subject,
+			VAPIDPublicKey:  push.publicKey,
+			VAPIDPrivateKey: push.privateKey,
+			TTL:             30,
+		})
+		if resp != nil {
+			resp.Body.Close()
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send notification"})
+			return
+		}
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("push endpoint returned status %d", resp.StatusCode)})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "test notification sent"})
 	}
 }
 

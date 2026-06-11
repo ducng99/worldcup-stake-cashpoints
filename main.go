@@ -58,6 +58,7 @@ func main() {
 		api.POST("/push/subscriptions", handlers.SubscribePush(database))
 		api.PATCH("/push/subscriptions/preferences", handlers.UpdatePushPreferences(database))
 		api.DELETE("/push/subscriptions", handlers.UnsubscribePush(database))
+		api.POST("/push/test", handlers.SendTestNotification(pushService))
 		api.POST("/sync", func(c *gin.Context) {
 			if apiKey == "" {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "FOOTBALL_DATA_API_KEY not set"})

@@ -149,6 +149,34 @@ export default function Notifications() {
     }
   }
 
+  const sendTest = async () => {
+    setBusy(true)
+    setStatus('')
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.getSubscription()
+      if (!subscription) {
+        setStatus('Not subscribed. Enable notifications first.')
+        return
+      }
+
+      const res = await fetch('/api/push/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to send test notification.')
+      }
+      setStatus('Test notification sent.')
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Failed to send test notification.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const unsubscribe = async () => {
     setBusy(true)
     setStatus('')
@@ -210,6 +238,7 @@ export default function Notifications() {
                 {isSubscribed() ? 'Save Preferences' : 'Enable Notifications'}
               </button>
               <Show when={isSubscribed()}>
+                <button class="secondary-button" disabled={busy()} onClick={sendTest}>Send Test</button>
                 <button class="secondary-button" disabled={busy()} onClick={unsubscribe}>Unsubscribe</button>
               </Show>
             </div>
