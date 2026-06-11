@@ -30,7 +30,8 @@ COPY --from=go-builder /worldcup-stake .
 VOLUME ["/data"]
 
 ENV PORT=8080 \
-    TZ=Pacific/Auckland
+    TZ=Pacific/Auckland \
+    GIN_MODE=release
 
 EXPOSE 8080
 CMD ["./worldcup-stake"]
