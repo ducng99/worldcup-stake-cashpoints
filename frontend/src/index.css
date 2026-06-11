@@ -212,7 +212,7 @@ section { margin-bottom: 2.75rem; }
 }
 
 .match-row:hover {
-  transform: translateX(3px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-hover);
 }
 
