@@ -108,8 +108,8 @@ func (s *Syncer) Sync() {
 			INSERT INTO matches (id, home_team_id, away_team_id, home_score, away_score, status, match_date, stage)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
-				home_score = excluded.home_score,
-				away_score = excluded.away_score,
+				home_score = COALESCE(excluded.home_score, matches.home_score),
+				away_score = COALESCE(excluded.away_score, matches.away_score),
 				status     = excluded.status,
 				match_date = excluded.match_date,
 				stage      = excluded.stage
@@ -164,7 +164,7 @@ func (s *Syncer) previousMatchStatus(matchID string) (string, error) {
 
 func isLiveStatus(status string) bool {
 	switch strings.ToUpper(strings.TrimSpace(status)) {
-	case "IN_PLAY", "PAUSED", "LIVE":
+	case "IN_PLAY", "PAUSED", "LIVE", "TIMED":
 		return true
 	default:
 		return false
@@ -173,7 +173,7 @@ func isLiveStatus(status string) bool {
 
 func isUpcomingStatus(status string) bool {
 	switch strings.ToUpper(strings.TrimSpace(status)) {
-	case "SCHEDULED", "TIMED":
+	case "SCHEDULED":
 		return true
 	default:
 		return false
