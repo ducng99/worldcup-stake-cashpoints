@@ -1,4 +1,4 @@
-# World Cup Stake Cashpoints
+# World Cup Stake
 
 A World Cup 2026 sweepstake tracker with live match syncing, leaderboard scoring, and browser push notifications.
 
