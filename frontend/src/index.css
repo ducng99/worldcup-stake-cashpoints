@@ -543,6 +543,88 @@ section { margin-bottom: 2.75rem; }
   text-align: center;
 }
 
+/* -- NOTIFICATIONS ----------------------------------- */
+.notifications-card {
+  max-width: 680px;
+}
+
+.settings-panel {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.settings-select {
+  max-width: 280px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.checkbox-row input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary);
+}
+
+.settings-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.primary-button,
+.secondary-button {
+  border: 1.5px solid var(--primary);
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.65rem 0.9rem;
+}
+
+.primary-button {
+  background: var(--primary);
+  color: #fff;
+}
+
+.secondary-button {
+  background: var(--bg-card);
+  color: var(--primary);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.settings-status {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 /* ── UTILITIES ────────────────────────────────────── */
 .loading {
   color: var(--text-muted);
@@ -565,4 +647,46 @@ section { margin-bottom: 2.75rem; }
   background: var(--bg-card);
   border: 1.5px dashed var(--border);
   border-radius: var(--radius);
+}
+
+@media (max-width: 720px) {
+  nav {
+    gap: 0.9rem;
+    overflow-x: auto;
+    padding: 0 1rem;
+  }
+
+  .nav-logo {
+    font-size: 1.1rem;
+  }
+
+  .logo-badge {
+    display: none;
+  }
+
+  .app {
+    padding: 0 1rem;
+  }
+
+  .row-fixture {
+    gap: 0.55rem;
+    padding: 0.9rem;
+  }
+
+  .row-team-name {
+    font-size: 1.05rem;
+  }
+
+  .row-flag {
+    font-size: 2rem;
+  }
+
+  .row-score-block {
+    width: 5.2rem;
+  }
+
+  .row-score-num {
+    font-size: 2.1rem;
+    min-width: 1.5rem;
+  }
 }

@@ -42,18 +42,29 @@ The Go binary embeds `frontend/dist/` at build time via `//go:embed all:dist` (`
 **API routes:**
 | Method | Path | Handler |
 |--------|------|---------|
+| GET | `/api/users` | Returns seeded players for subscription settings |
 | GET | `/api/matches` | Returns matches + team→owner map |
 | GET | `/api/leaderboard` | Returns players ranked by wins |
+| GET | `/api/push/vapid-public-key` | Returns configured VAPID public key |
+| POST | `/api/push/subscribe` | Upserts a browser push subscription |
+| PUT | `/api/push/preferences` | Updates selected player/preferences for an endpoint |
+| POST | `/api/push/unsubscribe` | Deletes a browser push subscription |
 | POST | `/api/sync` | Manually triggers a match sync |
 
-**Database:** SQLite file `stake.db`. Tables: `users`, `teams`, `user_teams`, `matches`. No migration tool — schema is created on startup. Scoring: 1 point per finished match win for an owned team.
+**Database:** SQLite file `stake.db`. Tables: `users`, `teams`, `user_teams`, `matches`, `push_subscriptions`, `notification_deliveries`, `leaderboard_state`. No migration tool — schema is created on startup. Scoring: 1 point per finished match win for an owned team.
 
 **Frontend routes:**
 - `/` — Matches page (upcoming/finished, grouped)
 - `/leaderboard` — Players ranked by points
+- `/notifications` — Browser push subscription settings
 
 **Match sync:** `handlers/sync.go` maps football-data.org TLA codes to local team IDs. Matches are upserted with `ON CONFLICT`. Logs a warning for unrecognised teams.
 
 ## Environment Variables
 - `FOOTBALL_DATA_API_KEY` — Required for live match sync from football-data.org
+- `VAPID_PUBLIC_KEY` — Public VAPID key for browser push subscriptions
+- `VAPID_PRIVATE_KEY` — Private VAPID key used to sign Web Push requests
+- `VAPID_SUBJECT` — Contact subject for VAPID, e.g. `mailto:admin@example.com`
 - `PORT` — Server port (default: `8080`)
+
+Generate VAPID keys with `github.com/SherClockHolmes/webpush-go`'s `webpush.GenerateVAPIDKeys()` helper in a tiny local Go snippet or command.

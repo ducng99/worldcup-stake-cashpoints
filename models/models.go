@@ -1,5 +1,10 @@
 package models
 
+type User struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 type Match struct {
 	ID           string `json:"id"`
 	HomeTeamID   int    `json:"homeTeamId"`

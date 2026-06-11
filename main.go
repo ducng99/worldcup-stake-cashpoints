@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"worldcup-stake/db"
-	"worldcup-stake/handlers"
 	"worldcup-stake/frontend"
+	"worldcup-stake/handlers"
 )
 
 func main() {
@@ -27,7 +27,8 @@ func main() {
 	}
 
 	apiKey := os.Getenv("FOOTBALL_DATA_API_KEY")
-	syncer := handlers.NewSyncer(database, apiKey)
+	pushService := handlers.NewPushService(database)
+	syncer := handlers.NewSyncer(database, apiKey, pushService)
 
 	go func() {
 		if apiKey != "" {
@@ -50,8 +51,13 @@ func main() {
 
 	api := r.Group("/api")
 	{
+		api.GET("/users", handlers.GetUsers(database))
 		api.GET("/matches", handlers.GetMatches(database))
 		api.GET("/leaderboard", handlers.GetLeaderboard(database))
+		api.GET("/push/vapid-public-key", handlers.GetVAPIDPublicKey(pushService))
+		api.POST("/push/subscribe", handlers.SubscribePush(database))
+		api.PUT("/push/preferences", handlers.UpdatePushPreferences(database))
+		api.POST("/push/unsubscribe", handlers.UnsubscribePush(database))
 		api.POST("/sync", func(c *gin.Context) {
 			if apiKey == "" {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "FOOTBALL_DATA_API_KEY not set"})

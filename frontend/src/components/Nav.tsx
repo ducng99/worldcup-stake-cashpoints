@@ -10,6 +10,7 @@ export default function Nav() {
       </A>
       <A href="/" activeClass="active" end>Matches</A>
       <A href="/leaderboard" activeClass="active">Leaderboard</A>
+      <A href="/notifications" activeClass="active">Notifications</A>
     </nav>
   )
 }

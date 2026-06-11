@@ -61,6 +61,29 @@ func migrate(database *sql.DB) error {
 			match_date   TEXT,
 			stage        TEXT
 		);
+		CREATE TABLE IF NOT EXISTS push_subscriptions (
+			id                 INTEGER PRIMARY KEY,
+			user_id            INTEGER REFERENCES users(id),
+			endpoint           TEXT NOT NULL UNIQUE,
+			p256dh             TEXT NOT NULL,
+			auth               TEXT NOT NULL,
+			notify_leaderboard BOOLEAN NOT NULL DEFAULT 1,
+			notify_match_start BOOLEAN NOT NULL DEFAULT 1,
+			created_at         TEXT NOT NULL,
+			updated_at         TEXT NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS notification_deliveries (
+			subscription_id INTEGER REFERENCES push_subscriptions(id),
+			event_key       TEXT NOT NULL,
+			sent_at         TEXT NOT NULL,
+			PRIMARY KEY (subscription_id, event_key)
+		);
+		CREATE TABLE IF NOT EXISTS leaderboard_state (
+			user_id    INTEGER PRIMARY KEY REFERENCES users(id),
+			rank       INTEGER NOT NULL,
+			points     INTEGER NOT NULL,
+			updated_at TEXT NOT NULL
+		);
 	`)
 	return err
 }

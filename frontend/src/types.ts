@@ -25,3 +25,8 @@ export interface LeaderboardEntry {
   points: number
   teams: string[]
 }
+
+export interface User {
+  id: number
+  name: string
+}
