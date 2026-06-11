@@ -44,14 +44,8 @@ export default function MatchCard(props: Props) {
 
   return (
     <div class={rowClass()}>
-      <div class="row-meta">
+      <div class={`row-meta${isLive() ? ' row-meta-live' : ''}`}>
         <span class="row-stage">{formatStage(props.match.stage)}</span>
-        <Show when={isLive()}>
-          <span class="live-badge">
-            <span class="live-dot" />
-            LIVE
-          </span>
-        </Show>
         <span class="row-date">{formatDate(props.match.matchDate)}</span>
       </div>
       <div class="row-fixture">
