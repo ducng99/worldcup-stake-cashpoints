@@ -6,18 +6,138 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
 
 type Syncer struct {
-	db     *sql.DB
-	apiKey string
-	push   *PushService
+	db        *sql.DB
+	providers []MatchProvider
+	push      *PushService
 }
 
-func NewSyncer(database *sql.DB, apiKey string, push *PushService) *Syncer {
-	return &Syncer{db: database, apiKey: apiKey, push: push}
+func NewSyncer(database *sql.DB, providers []MatchProvider, push *PushService) *Syncer {
+	return &Syncer{db: database, providers: providers, push: push}
+}
+
+type MatchProvider interface {
+	Name() string
+	FetchMatches() ([]ProviderMatch, error)
+}
+
+type ProviderMatch struct {
+	Source       string
+	SourceID     string
+	HomeTeamCode string
+	AwayTeamCode string
+	HomeScore    *int
+	AwayScore    *int
+	Status       string
+	MatchDate    string
+	Stage        string
+}
+
+type FootballDataProvider struct {
+	apiKey string
+	client *http.Client
+}
+
+func NewFootballDataProvider(apiKey string) *FootballDataProvider {
+	return &FootballDataProvider{apiKey: apiKey, client: http.DefaultClient}
+}
+
+func (p *FootballDataProvider) Name() string {
+	return "football-data"
+}
+
+func (p *FootballDataProvider) FetchMatches() ([]ProviderMatch, error) {
+	req, err := http.NewRequest("GET", "https://api.football-data.org/v4/competitions/WC/matches", nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("X-Auth-Token", p.apiKey)
+
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
+	var result footballDataResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	matches := make([]ProviderMatch, 0, len(result.Matches))
+	for _, m := range result.Matches {
+		matches = append(matches, ProviderMatch{
+			Source:       p.Name(),
+			SourceID:     fmt.Sprintf("%d", m.ID),
+			HomeTeamCode: m.HomeTeam.TLA,
+			AwayTeamCode: m.AwayTeam.TLA,
+			HomeScore:    m.Score.FullTime.Home,
+			AwayScore:    m.Score.FullTime.Away,
+			Status:       m.Status,
+			MatchDate:    m.UtcDate,
+			Stage:        m.Stage,
+		})
+	}
+	return matches, nil
+}
+
+type FIFAProvider struct {
+	client *http.Client
+}
+
+func NewFIFAProvider() *FIFAProvider {
+	return &FIFAProvider{client: http.DefaultClient}
+}
+
+func (p *FIFAProvider) Name() string {
+	return "fifa"
+}
+
+func (p *FIFAProvider) FetchMatches() ([]ProviderMatch, error) {
+	req, err := http.NewRequest("GET", "https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idCompetition=17&idSeason=285023", nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
+	var result fifaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	matches := make([]ProviderMatch, 0, len(result.Results))
+	for _, m := range result.Results {
+		matches = append(matches, ProviderMatch{
+			Source:       p.Name(),
+			SourceID:     m.ID,
+			HomeTeamCode: m.Home.Abbreviation,
+			AwayTeamCode: m.Away.Abbreviation,
+			HomeScore:    m.HomeTeamScore,
+			AwayScore:    m.AwayTeamScore,
+			Status:       fifaMatchStatus(m.MatchStatus),
+			MatchDate:    m.Date,
+			Stage:        fifaStage(m),
+		})
+	}
+	return matches, nil
 }
 
 type teamInfo struct {
@@ -25,11 +145,11 @@ type teamInfo struct {
 	Name string
 }
 
-type apiResponse struct {
-	Matches []apiMatch `json:"matches"`
+type footballDataResponse struct {
+	Matches []footballDataMatch `json:"matches"`
 }
 
-type apiMatch struct {
+type footballDataMatch struct {
 	ID       int      `json:"id"`
 	UtcDate  string   `json:"utcDate"`
 	Status   string   `json:"status"`
@@ -52,55 +172,81 @@ type apiScorePair struct {
 	Away *int `json:"away"`
 }
 
+type fifaResponse struct {
+	Results []fifaMatch `json:"Results"`
+}
+
+type fifaMatch struct {
+	ID            string           `json:"IdMatch"`
+	Date          string           `json:"Date"`
+	MatchStatus   int              `json:"MatchStatus"`
+	Home          fifaTeam         `json:"Home"`
+	Away          fifaTeam         `json:"Away"`
+	HomeTeamScore *int             `json:"HomeTeamScore"`
+	AwayTeamScore *int             `json:"AwayTeamScore"`
+	StageName     []localizedValue `json:"StageName"`
+	GroupName     []localizedValue `json:"GroupName"`
+}
+
+type fifaTeam struct {
+	Abbreviation string `json:"Abbreviation"`
+}
+
+type localizedValue struct {
+	Locale      string `json:"Locale"`
+	Description string `json:"Description"`
+}
+
 func (s *Syncer) Sync() {
-	log.Println("Syncing match data from football-data.org...")
+	log.Println("Syncing match data...")
 
-	req, err := http.NewRequest("GET", "https://api.football-data.org/v4/competitions/WC/matches", nil)
-	if err != nil {
-		log.Printf("Sync: failed to create request: %v", err)
-		return
-	}
-	req.Header.Set("X-Auth-Token", s.apiKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Printf("Sync: request failed: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Sync: API returned status %d", resp.StatusCode)
-		return
-	}
-
-	var result apiResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		log.Printf("Sync: failed to decode response: %v", err)
+	for _, provider := range s.providers {
+		matches, err := provider.FetchMatches()
+		if err != nil {
+			log.Printf("Sync: provider %s failed: %v", provider.Name(), err)
+			continue
+		}
+		if len(matches) == 0 {
+			log.Printf("Sync: provider %s returned no matches", provider.Name())
+			continue
+		}
+		if err := s.syncMatches(provider.Name(), matches); err != nil {
+			log.Printf("Sync: provider %s sync failed: %v", provider.Name(), err)
+			continue
+		}
 		return
 	}
 
+	log.Println("Sync: all providers failed")
+}
+
+func (s *Syncer) syncMatches(providerName string, matches []ProviderMatch) error {
 	teamMap, err := s.buildTeamMap()
 	if err != nil {
-		log.Printf("Sync: failed to build team map: %v", err)
-		return
+		return fmt.Errorf("build team map: %w", err)
 	}
 
 	updated := 0
-	for _, m := range result.Matches {
-		if m.HomeTeam.TLA == "" || m.AwayTeam.TLA == "" {
+	for _, m := range matches {
+		source := m.Source
+		if source == "" {
+			source = providerName
+		}
+		homeCode := strings.ToUpper(strings.TrimSpace(m.HomeTeamCode))
+		awayCode := strings.ToUpper(strings.TrimSpace(m.AwayTeamCode))
+		if homeCode == "" || awayCode == "" || m.MatchDate == "" || m.SourceID == "" {
 			continue
 		}
-		home, homeOK := teamMap[m.HomeTeam.TLA]
-		away, awayOK := teamMap[m.AwayTeam.TLA]
+		home, homeOK := teamMap[homeCode]
+		away, awayOK := teamMap[awayCode]
 		if !homeOK || !awayOK {
-			log.Printf("Sync: unknown team TLA home=%q away=%q, skipping match %d", m.HomeTeam.TLA, m.AwayTeam.TLA, m.ID)
+			log.Printf("Sync: unknown team code home=%q away=%q, skipping %s match %s", homeCode, awayCode, source, m.SourceID)
 			continue
 		}
-		matchID := fmt.Sprintf("%d", m.ID)
+		matchID := internalMatchID(m.MatchDate, homeCode, awayCode)
 		previousStatus, err := s.previousMatchStatus(matchID)
 		if err != nil {
-			log.Printf("Sync: failed to fetch previous match %d status: %v", m.ID, err)
+			log.Printf("Sync: failed to fetch previous match %s status: %v", matchID, err)
 			continue
 		}
 		nextStatus := nextMatchStatus(previousStatus, m.Status)
@@ -115,10 +261,20 @@ func (s *Syncer) Sync() {
 				match_date = excluded.match_date,
 				stage      = excluded.stage
 		`, matchID, home.ID, away.ID,
-			m.Score.FullTime.Home, m.Score.FullTime.Away,
-			nextStatus, m.UtcDate, m.Stage)
+			m.HomeScore, m.AwayScore,
+			nextStatus, m.MatchDate, m.Stage)
 		if err != nil {
-			log.Printf("Sync: failed to upsert match %d: %v", m.ID, err)
+			log.Printf("Sync: failed to upsert match %s: %v", matchID, err)
+			continue
+		}
+		_, err = s.db.Exec(`
+			INSERT INTO match_sources (match_id, source, source_match_id)
+			VALUES (?, ?, ?)
+			ON CONFLICT(match_id, source) DO UPDATE SET
+				source_match_id = excluded.source_match_id
+		`, matchID, source, m.SourceID)
+		if err != nil {
+			log.Printf("Sync: failed to upsert source %s match %s: %v", source, m.SourceID, err)
 			continue
 		}
 		if s.push != nil && isUpcomingStatus(previousStatus) && isLiveStatus(nextStatus) {
@@ -132,7 +288,58 @@ func (s *Syncer) Sync() {
 		}
 	}
 
-	log.Printf("Sync: %d/%d matches upserted", updated, len(result.Matches))
+	log.Printf("Sync: %d/%d matches upserted from %s", updated, len(matches), providerName)
+	return nil
+}
+
+func fifaMatchStatus(status int) string {
+	switch status {
+	case 0:
+		return "FINISHED"
+	case 3:
+		return "LIVE"
+	case 1:
+		return "UPCOMING"
+	default:
+		return "UPCOMING"
+	}
+}
+
+func fifaStage(m fifaMatch) string {
+	if group := localizedDescription(m.GroupName); group != "" {
+		return group
+	}
+	return localizedDescription(m.StageName)
+}
+
+func localizedDescription(values []localizedValue) string {
+	for _, value := range values {
+		if value.Locale == "en-GB" && value.Description != "" {
+			return value.Description
+		}
+	}
+	for _, value := range values {
+		if value.Description != "" {
+			return value.Description
+		}
+	}
+	return ""
+}
+
+var nonMatchIDChars = regexp.MustCompile(`[^A-Z0-9]+`)
+
+func internalMatchID(matchDate, homeCode, awayCode string) string {
+	t, err := time.Parse(time.RFC3339, matchDate)
+	if err != nil {
+		return fmt.Sprintf("%s_%s_%s", cleanMatchIDPart(matchDate), cleanMatchIDPart(homeCode), cleanMatchIDPart(awayCode))
+	}
+	return fmt.Sprintf("%s_%s_%s", t.UTC().Format("200601021504"), cleanMatchIDPart(homeCode), cleanMatchIDPart(awayCode))
+}
+
+func cleanMatchIDPart(value string) string {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	value = nonMatchIDChars.ReplaceAllString(value, "")
+	return value
 }
 
 func (s *Syncer) buildTeamMap() (map[string]teamInfo, error) {

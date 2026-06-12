@@ -26,19 +26,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	apiKey := os.Getenv("FOOTBALL_DATA_API_KEY")
 	pushService := handlers.NewPushService(database)
-	syncer := handlers.NewSyncer(database, apiKey, pushService)
+	providers := []handlers.MatchProvider{handlers.NewFIFAProvider()}
+	if apiKey := os.Getenv("FOOTBALL_DATA_API_KEY"); apiKey != "" {
+		providers = append(providers, handlers.NewFootballDataProvider(apiKey))
+	}
+	syncer := handlers.NewSyncer(database, providers, pushService)
 
 	go func() {
-		if apiKey != "" {
-			syncer.Sync()
-		}
+		syncer.Sync()
 		ticker := time.NewTicker(1 * time.Minute)
 		for range ticker.C {
-			if apiKey != "" {
-				syncer.Sync()
-			}
+			syncer.Sync()
 		}
 	}()
 
@@ -60,10 +59,6 @@ func main() {
 		api.DELETE("/push/subscriptions", handlers.UnsubscribePush(database))
 		api.POST("/push/test", handlers.SendTestNotification(pushService))
 		api.POST("/sync", func(c *gin.Context) {
-			if apiKey == "" {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "FOOTBALL_DATA_API_KEY not set"})
-				return
-			}
 			go syncer.Sync()
 			c.JSON(http.StatusOK, gin.H{"status": "sync triggered"})
 		})

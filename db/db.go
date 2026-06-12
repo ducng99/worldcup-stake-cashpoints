@@ -9,7 +9,7 @@ import (
 )
 
 func Init() (*sql.DB, error) {
-	if err := os.MkdirAll(DataDir(), 0755); err != nil {
+	if err := os.MkdirAll(DataDir(), 0o755); err != nil {
 		return nil, err
 	}
 
@@ -60,6 +60,13 @@ func migrate(database *sql.DB) error {
 			status       TEXT,
 			match_date   TEXT,
 			stage        TEXT
+		);
+		CREATE TABLE IF NOT EXISTS match_sources (
+			match_id        TEXT NOT NULL REFERENCES matches(id),
+			source          TEXT NOT NULL,
+			source_match_id TEXT NOT NULL,
+			PRIMARY KEY (match_id, source),
+			UNIQUE(source, source_match_id)
 		);
 		CREATE TABLE IF NOT EXISTS push_subscriptions (
 			id                 INTEGER PRIMARY KEY,
