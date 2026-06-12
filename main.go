@@ -39,6 +39,8 @@ func main() {
 			interval := 1 * time.Hour
 			if syncer.HasLiveMatches() {
 				interval = 1 * time.Minute
+			} else if next := syncer.TimeUntilNextMatch(); next < interval {
+				interval = next
 			}
 			time.Sleep(interval)
 			syncer.Sync()

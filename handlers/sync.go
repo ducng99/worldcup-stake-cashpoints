@@ -228,6 +228,23 @@ func (s *Syncer) HasLiveMatches() bool {
 	return count > 0
 }
 
+func (s *Syncer) TimeUntilNextMatch() time.Duration {
+	var matchDate string
+	err := s.db.QueryRow("SELECT match_date FROM matches WHERE status = 'UPCOMING' ORDER BY match_date ASC LIMIT 1").Scan(&matchDate)
+	if err != nil {
+		return time.Hour
+	}
+	t, err := time.Parse(time.RFC3339, matchDate)
+	if err != nil {
+		return time.Hour
+	}
+	d := time.Until(t)
+	if d < 0 {
+		return 0
+	}
+	return d
+}
+
 func (s *Syncer) syncMatches(providerName string, matches []ProviderMatch) error {
 	teamMap, err := s.buildTeamMap()
 	if err != nil {
