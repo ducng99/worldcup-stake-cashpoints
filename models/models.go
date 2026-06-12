@@ -24,6 +24,6 @@ type LeaderboardEntry struct {
 	Rank   int      `json:"rank"`
 	UserID int      `json:"userId"`
 	Name   string   `json:"name"`
-	Points int      `json:"points"`
+	Points float64  `json:"points"`
 	Teams  []string `json:"teams"`
 }

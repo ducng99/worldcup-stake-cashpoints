@@ -258,8 +258,8 @@ func (p *PushService) NotifyMatchStart(matchID string, homeTeamID, awayTeamID in
 	})
 }
 
-func (p *PushService) NotifyLeaderboardChange(userID, oldRank, newRank, points int) {
-	eventKey := "leaderboard-rank:" + itoa(userID) + ":" + itoa(oldRank) + ":" + itoa(newRank) + ":" + itoa(points)
+func (p *PushService) NotifyLeaderboardChange(userID, oldRank, newRank int, points float64) {
+	eventKey := "leaderboard-rank:" + itoa(userID) + ":" + itoa(oldRank) + ":" + itoa(newRank) + ":" + strconv.FormatFloat(points, 'f', -1, 64)
 	template := randomPushTemplate(leaderboardTemplates)
 	p.sendToSubscriptions(`
 		SELECT id, endpoint, p256dh, auth

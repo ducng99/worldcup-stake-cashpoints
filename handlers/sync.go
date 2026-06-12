@@ -448,7 +448,8 @@ func (s *Syncer) notifyLeaderboardChanges() error {
 	initializing := existingCount == 0
 
 	for _, entry := range entries {
-		var oldRank, oldPoints int
+		var oldRank int
+		var oldPoints float64
 		err := s.db.QueryRow("SELECT rank, points FROM leaderboard_state WHERE user_id = ?", entry.UserID).Scan(&oldRank, &oldPoints)
 		if err != nil && err != sql.ErrNoRows {
 			return err

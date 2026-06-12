@@ -88,7 +88,7 @@ func migrate(database *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS leaderboard_state (
 			user_id    INTEGER PRIMARY KEY REFERENCES users(id),
 			rank       INTEGER NOT NULL,
-			points     INTEGER NOT NULL,
+			points     REAL NOT NULL,
 			updated_at TEXT NOT NULL
 		);
 		UPDATE matches
