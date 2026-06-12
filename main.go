@@ -35,8 +35,12 @@ func main() {
 
 	go func() {
 		syncer.Sync()
-		ticker := time.NewTicker(1 * time.Minute)
-		for range ticker.C {
+		for {
+			interval := 1 * time.Hour
+			if syncer.HasLiveMatches() {
+				interval = 1 * time.Minute
+			}
+			time.Sleep(interval)
 			syncer.Sync()
 		}
 	}()

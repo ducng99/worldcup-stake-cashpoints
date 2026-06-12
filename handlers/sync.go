@@ -220,6 +220,14 @@ func (s *Syncer) Sync() {
 	log.Println("Sync: all providers failed")
 }
 
+func (s *Syncer) HasLiveMatches() bool {
+	var count int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM matches WHERE status = 'LIVE'").Scan(&count); err != nil {
+		return false
+	}
+	return count > 0
+}
+
 func (s *Syncer) syncMatches(providerName string, matches []ProviderMatch) error {
 	teamMap, err := s.buildTeamMap()
 	if err != nil {
