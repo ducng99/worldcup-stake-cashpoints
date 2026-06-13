@@ -34,17 +34,27 @@ type pushTemplate struct {
 }
 
 var matchStartTemplates = []pushTemplate{
-	{Title: "Kickoff!", Body: "%s vs %s is underway. Time to sweat your stake."},
-	{Title: "Ball's rolling", Body: "%s vs %s has kicked off. Your team is on the clock."},
-	{Title: "Game on", Body: "%s vs %s is live. Settle in and watch the table shake."},
-	{Title: "Whistle blown", Body: "%s vs %s just started. Every minute matters now."},
+	{Title: "Kickoff!", Body: "%s vs %s — the ref's blown the whistle. Your stake is on the line."},
+	{Title: "It's a World Cup night!", Body: "%s vs %s is live. Grab a seat and pray for goals."},
+	{Title: "Ball's rolling", Body: "%s vs %s underway. 90 minutes of beautiful chaos."},
+	{Title: "Game on!", Body: "%s vs %s just kicked off. No VAR can save your nerves now."},
+	{Title: "World Cup fever", Body: "%s vs %s is happening RIGHT NOW. Don't blink."},
 }
 
-var leaderboardTemplates = []pushTemplate{
-	{Title: "The table just moved", Body: "You're now %s after moving from %s."},
-	{Title: "Leaderboard drama", Body: "The standings changed: %s now, %s before."},
-	{Title: "Table update", Body: "You're sitting %s after being %s. Check the damage."},
-	{Title: "Rank shuffle", Body: "You've landed at %s after starting at %s. The race is heating up."},
+var leaderboardUpTemplates = []pushTemplate{
+	{Title: "Golazo!", Body: "You've surged to %s from %s. That's a top-corner kind of move."},
+	{Title: "Hat-trick hero", Body: "From %s to %s — you're on fire. The leaderboard fears you."},
+	{Title: "Top bins!", Body: "You climbed to %s from %s. Textbook World Cup campaign."},
+	{Title: "Clean sheet, clean climb", Body: "Moved up to %s from %s. Unstoppable run."},
+	{Title: "Champion material", Body: "You're now %s after %s. The trophy is within reach."},
+}
+
+var leaderboardDownTemplates = []pushTemplate{
+	{Title: "Red card alert", Body: "Dropped to %s from %s. The table just tackled you."},
+	{Title: "Own goal moment", Body: "Slipped from %s to %s. Shake it off — there's still time."},
+	{Title: "VAR says no", Body: "You fell to %s from %s. A harsh call but the game goes on."},
+	{Title: "Relegation zone vibes", Body: "Down to %s from %s. Time for a tactical substitution."},
+	{Title: "Conceded a goal", Body: "You're now %s after %s. The comeback starts now."},
 }
 
 const pushRecordSize uint32 = 2048
@@ -260,7 +270,11 @@ func (p *PushService) NotifyMatchStart(matchID string, homeTeamID, awayTeamID in
 
 func (p *PushService) NotifyLeaderboardChange(userID, oldRank, newRank int, points float64) {
 	eventKey := "leaderboard-rank:" + itoa(userID) + ":" + itoa(oldRank) + ":" + itoa(newRank) + ":" + strconv.FormatFloat(points, 'f', -1, 64)
-	template := randomPushTemplate(leaderboardTemplates)
+	templates := leaderboardDownTemplates
+	if newRank < oldRank {
+		templates = leaderboardUpTemplates
+	}
+	template := randomPushTemplate(templates)
 	p.sendToSubscriptions(`
 		SELECT id, endpoint, p256dh, auth
 		FROM push_subscriptions
